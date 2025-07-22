@@ -87,4 +87,42 @@ class MonkeySpeciesServiceTest {
         assertFalse(names.isEmpty());
         assertTrue(names.contains("Proboscis Monkey"));
     }
+
+    @Test
+    void testDatasetIncludesFictionalSpecies() {
+        List<MonkeySpecies> allSpecies = service.getAllSpecies();
+        
+        // Filter for fictional species
+        List<MonkeySpecies> fictionalSpecies = allSpecies.stream()
+                .filter(MonkeySpecies::isFictional)
+                .toList();
+        
+        // Filter for real species
+        List<MonkeySpecies> realSpecies = allSpecies.stream()
+                .filter(species -> !species.isFictional())
+                .toList();
+        
+        // Assert that the dataset includes fictional species
+        assertNotNull(fictionalSpecies);
+        assertFalse(fictionalSpecies.isEmpty(), "Dataset should include fictional species");
+        
+        // Assert that the dataset also includes real species
+        assertNotNull(realSpecies);
+        assertFalse(realSpecies.isEmpty(), "Dataset should include real species");
+        
+        // Verify specific fictional species exist
+        List<String> fictionalNames = fictionalSpecies.stream()
+                .map(MonkeySpecies::speciesName)
+                .toList();
+        
+        assertTrue(fictionalNames.contains("Crystal Fur Monkey"), 
+                   "Dataset should include Crystal Fur Monkey as fictional species");
+        assertTrue(fictionalNames.contains("Quantum Phase Monkey"), 
+                   "Dataset should include Quantum Phase Monkey as fictional species");
+        
+        // Verify that fictional species are properly marked
+        fictionalSpecies.forEach(species -> 
+            assertTrue(species.isFictional(), 
+                      "Species " + species.speciesName() + " should be marked as fictional"));
+    }
 }
