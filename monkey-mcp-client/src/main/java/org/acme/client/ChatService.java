@@ -35,8 +35,7 @@ public class ChatService {
                 Use the available tools to provide accurate and up to date information.
                 """)
         String chat(@MemoryId String memoryId, @UserMessage String message);
-
-        String chat(List<ChatMessage> messages);
+        
     }
 
     public ChatService() {
