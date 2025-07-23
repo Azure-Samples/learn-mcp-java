@@ -9,7 +9,9 @@ import java.util.UUID;
 
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
+import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.SystemMessage;
@@ -23,7 +25,9 @@ public class ChatService {
 
     private Bot bot;
 
-    private OllamaChatModel chatModel;
+    private ChatModel chatModel;
+    private String provider;
+    private String model;
 
     private ToolsService toolsService = new ToolsService();
 
@@ -38,13 +42,34 @@ public class ChatService {
         
     }
 
-    public ChatService() {
-        chatModel = OllamaChatModel.builder()
-                .baseUrl("http://localhost:11434")
-                .modelName("llama3.2")
-                .timeout(Duration.ofSeconds(10))
-                .temperature(0.7)
-                .build();
+    public ChatService(String provider, String model) {
+        this.provider = provider;
+        this.model = model;
+        
+        // Create appropriate chat model based on provider
+        switch (provider.toLowerCase()) {
+            case "openai" -> {
+                chatModel = OpenAiChatModel.builder()
+                        .apiKey(System.getenv("OPENAI_API_KEY"))
+                        .modelName(model)
+                        .timeout(Duration.ofSeconds(30))
+                        .temperature(0.7)
+                        .build();
+            }
+            case "ollama" -> {
+                chatModel = OllamaChatModel.builder()
+                        .baseUrl("http://localhost:11434")
+                        .modelName(model)
+                        .timeout(Duration.ofSeconds(10))
+                        .temperature(0.7)
+                        .build();
+            }
+            default -> {
+                out.println("✗ Unsupported provider: " + provider);
+                chatModel = null;
+                return;
+            }
+        }
 
         var chatMemoryStore = new InMemoryChatMemoryStore();
 
@@ -62,13 +87,12 @@ public class ChatService {
         try {
             bot.chat("health-check", "Say YES if you are ready to chat");
         } catch (RuntimeException e) {
-            out.println("✗ Failed to connect to Ollama model: " + e.getMessage());
+            out.println("✗ Failed to connect to " + provider + " model (" + model + "): " + e.getMessage());
             chatModel = null;
             return;
         }
 
-        out.printf("✓ Chat initialized!",
-                toolsService.getAvailableTools().size());
+        out.printf("✓ Chat initialized with %s (%s)!\n", provider, model);
     }
 
     public boolean isAvailable() {
@@ -101,11 +125,11 @@ public class ChatService {
     }
 
     private void printInfo() {
-        out.println("""
+        out.printf("""
                 ════════════════════════════════════
                       Java MCP Chat Client
                 ════════════════════════════════════
-                → Starting chat with local Ollama (llama3.2) + MCP Tools
+                → Starting chat with %s (%s) + MCP Tools
 
                 💡 Try asking:
 
@@ -114,7 +138,7 @@ public class ChatService {
 
                 Type 'exit', 'quit', or 'bye' to end the conversation
                 ───────────────────────────────------------------────
-                """);
+                """, provider, model);
     }
 
 }
